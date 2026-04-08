@@ -4,7 +4,7 @@ from sklearn.metrics.pairwise import linear_kernel
 import numpy as np
 
 # 1. Load and Prepare Data
-df = pd.read_csv('smartphones_data.csv.csv')
+df = pd.read_csv('../smartphones_data.csv.csv')
 
 # Combine metadata columns to create a rich description for each phone
 # We use brand, OS, processor, and display type as our features
