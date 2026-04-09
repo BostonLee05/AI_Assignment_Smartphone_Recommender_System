@@ -1,105 +1,96 @@
 import pandas as pd
+import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
-import numpy as np
 
-# 1. Load and Prepare Data
+# 1. Load data
 df = pd.read_csv('../smartphones_data.csv.csv')
+df.columns = df.columns.str.lower()
+df = df.fillna("")
 
-# Combine metadata columns to create a rich description for each phone
-# We use brand, OS, processor, and display type as our features
-df['metadata'] = (df['brand_name'] + " " +
-                  df['OS'] + " " +
-                  df['processor_brand'] + " " +
-                  df['display_types']).fillna('')
+# 2. Convert numeric safely
+df['ram'] = pd.to_numeric(df['ram'], errors='coerce').fillna(0).astype(int)
+df['storage'] = pd.to_numeric(df['storage'], errors='coerce').fillna(0).astype(int)
+df['battery_cap'] = pd.to_numeric(df['battery_cap'], errors='coerce').fillna(0).astype(int)
 
-# 2. Produce the TF-IDF Matrix
-# Initialize the Vectorizer and remove common English stop words
+# 3. Create metadata (FIXED COLUMN NAMES)
+df['metadata'] = df['brand_name'] + " " + \
+                 df['name'] + " " + \
+                 df['processor_brand'] + " " + \
+                 df['os'] + " " + \
+                 df['ram'].astype(str) + "GB RAM " + \
+                 df['storage'].astype(str) + "GB Storage " + \
+                 df['battery_cap'].astype(str) + "mAh"
+
+# 4. TF-IDF
 tfidf = TfidfVectorizer(stop_words='english')
 tfidf_matrix = tfidf.fit_transform(df['metadata'])
 
-# 3. Calculate Cosine Similarity
-# Using linear_kernel as it is faster for calculating dot products of TF-IDF vectors
+# 5. Similarity
 cosine_sim = linear_kernel(tfidf_matrix, tfidf_matrix)
 
-# Create a mapping of smartphone names to their indices
-indices = pd.Series(df.index, index=df['Name'].str.lower()).drop_duplicates()
+# 6. Index mapping
+indices = pd.Series(df.index, index=df['name'].str.lower()).drop_duplicates()
 
-# 4. Define the Recommendation Function
-def get_recommendations(name, cosine_sim=cosine_sim):
-    # Get the index of the smartphone that matches the name
-    if name not in indices:
-        return "Smartphone not found in dataset."
+# 7. Recommendation function
+def get_recommend(phone_name, top_n=10):
+    if phone_name not in indices:
+        return "Phone not found"
 
-    idx = indices[name]
-    # Handle duplicate names by taking the first occurrence
-    if isinstance(idx, pd.Series):
-        idx = idx.iloc[0]
-
-    # Get the list of cosine similarity scores for that smartphone with all smartphones
-    # Convert it into a list of tuples (index, similarity_score)
+    idx = indices[phone_name]
     sim_scores = list(enumerate(cosine_sim[idx]))
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)[1:top_n+1]
 
-    # Sort the list of tuples based on the similarity scores (the second element)
-    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+    phone_indices = [i[0] for i in sim_scores]
 
-    # Get the top 10 elements (excluding the item itself at index 0)
-    sim_scores = sim_scores[1:11]
+    return df[['brand_name', 'name', 'ram', 'storage', 'battery_cap', 'price']].iloc[phone_indices]
 
-    # Get the corresponding indices
-    smart_indices = [i[0] for i in sim_scores]
-
-    # Return the names corresponding to the indices of the top elements
-    return df['Name'].iloc[smart_indices]
-
-
+# 8. Run
 print("--- Smartphone Recommender System ---")
-user_input = input("Enter Smartphone Name: ")
+user_input = input("Enter Smartphone Name: ").lower()
 
-results = get_recommendations(user_input)
-
-print(f"\nRecommendations for '{user_input}':")
+results = get_recommend(user_input)
 print(results)
 
-
 def evaluate_system(df, recommendations_func, k=10, sample_size=50):
-    """
-    Evaluates the recommender using Precision@K based on Brand and OS match.
-    """
-    # Take a random sample of phones to test
+    # Prevent crash if dataset is small
+    sample_size = min(sample_size, len(df))
+
     test_samples = df.sample(sample_size)
 
     precision_scores = []
 
     for _, row in test_samples.iterrows():
-        target_name = row['Name'].lower()
+        target_name = row['name'].lower()
         target_brand = row['brand_name']
-        target_os = row['OS']
 
         # Get recommendations
         recommendations = recommendations_func(target_name)
 
-        if isinstance(recommendations, str):  # Handle "Not found"
+        if isinstance(recommendations, str):
             continue
 
-        # Calculate how many of the top K share the same Brand OR OS
-        # We consider a match 'relevant' if it matches the brand
+        # Get recommended rows
         rec_indices = recommendations.index
         matches = df.loc[rec_indices]
 
-        relevant_count = len(matches[matches['brand_name'] == target_brand])
+        relevant_count = len(matches[
+         (matches['brand_name'] == target_brand) &
+         (matches['ram'] >= row['ram']) &
+         (matches['battery_cap'] >= row['battery_cap'])
+         ])
 
-        # Precision @ K = (Relevant Items Recommended) / (Total Items Recommended)
         precision_at_k = relevant_count / k
         precision_scores.append(precision_at_k)
+
+    # Avoid empty list error
+    if len(precision_scores) == 0:
+        return 0
 
     mean_precision = np.mean(precision_scores)
     return mean_precision
 
-
-# --- Run the Evaluation ---
-# Pass your function into the evaluator
-m_precision = evaluate_system(df, get_recommendations, k=10)
+m_precision = evaluate_system(df, get_recommend, k=10)
 
 print(f"--- Evaluation Results ---")
 print(f"Mean Precision@10: {m_precision:.2%}")
