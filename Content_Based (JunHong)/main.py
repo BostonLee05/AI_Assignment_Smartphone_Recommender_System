@@ -13,7 +13,7 @@ df['ram'] = pd.to_numeric(df['ram'], errors='coerce').fillna(0).astype(int)
 df['storage'] = pd.to_numeric(df['storage'], errors='coerce').fillna(0).astype(int)
 df['battery_cap'] = pd.to_numeric(df['battery_cap'], errors='coerce').fillna(0).astype(int)
 
-# 3. Create metadata (FIXED COLUMN NAMES)
+# 3. Create metadata
 df['metadata'] = df['brand_name'] + " " + \
                  df['name'] + " " + \
                  df['processor_brand'] + " " + \
