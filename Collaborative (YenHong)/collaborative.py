@@ -56,7 +56,7 @@ def recommend_collaborative(phone_name, top_n=5):
 
 
 # ==============================
-# EVALUATION (REALISTIC)
+# EVALUATION 
 # ==============================
 def evaluate_model():
     # Use avg_rating as ground truth
@@ -69,6 +69,17 @@ def evaluate_model():
 
     return rmse
 
+def precision_at_k(phone_name, k=5):
+    recommendations = recommend_collaborative(phone_name, k)
+
+    # Define relevant phones as HIGH RATED (>= 4.0)
+    relevant = data[data['avg_rating'] >= 4.0]['Name'].tolist()
+
+    hits = sum([1 for rec in recommendations if rec in relevant])
+
+    precision = hits / k if k > 0 else 0
+
+    return precision
 
 # ==============================
 # TEST
@@ -88,3 +99,7 @@ if __name__ == "__main__":
     rmse = evaluate_model()
 
     print("\nRMSE:", rmse)
+
+    precision = precision_at_k(sample_phone, k=5)
+
+    print("Precision@5:", precision)
