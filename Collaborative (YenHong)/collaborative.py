@@ -6,7 +6,7 @@ import numpy as np
 # ==============================
 # LOAD DATASET
 # ==============================
-data = pd.read_csv("../smartphones.csv")
+data = pd.read_csv("smartphones.csv")
 
 # Standardize column name
 data['Name'] = data['model']
@@ -74,7 +74,7 @@ def evaluate_model():
 # TEST
 # ==============================
 if __name__ == "__main__":
-    print("\n=== Collaborative Filtering (Improved) ===\n")
+    print("\n=== Collaborative Filtering ===\n")
 
     sample_phone = data.iloc[0]['Name']
 
