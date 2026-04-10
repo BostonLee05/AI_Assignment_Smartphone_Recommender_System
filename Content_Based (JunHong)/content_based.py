@@ -3,16 +3,11 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 
-# 1. LOAD & CLEAN DATA
 df = pd.read_csv('../smartphones.csv')
-
-# standardize column names
-df.columns = df.columns.str.lower()
-
 # fill missing values
 df = df.fillna('')
 
-# ensure consistent string format
+# DATA CLEANING
 df['model'] = df['model'].str.lower().str.strip()
 df['brand_name'] = df['brand_name'].str.lower().str.strip()
 df['os'] = df['os'].str.lower().str.strip()
@@ -22,7 +17,6 @@ df['ram_capacity'] = pd.to_numeric(df['ram_capacity'], errors='coerce').fillna(0
 df['internal_memory'] = pd.to_numeric(df['internal_memory'], errors='coerce').fillna(0)
 df['refresh_rate'] = pd.to_numeric(df['refresh_rate'], errors='coerce').fillna(0)
 
-# 2. CREATE METADATA
 df['metadata'] = (
     df['brand_name'] + " " +
     df['os'] + " " +
@@ -33,16 +27,16 @@ df['metadata'] = (
     df['refresh_rate'].astype(str) + " Hz"
 )
 
-# 3. TF-IDF + SIMILARITY
+# TF-IDF + SIMILARITY
 tfidf = TfidfVectorizer(stop_words='english')
 tfidf_matrix = tfidf.fit_transform(df['metadata'])
 
 cosine_sim = linear_kernel(tfidf_matrix, tfidf_matrix)
 
 # map name → index
-indices = pd.Series(df.index, index=df['model']).drop_duplicates()
+indices = pd.Series(df.index, index=df['model'])
 
-# 4. RECOMMENDATION FUNCTION
+# RECOMMENDATION FUNCTION
 def get_recommendations(model, cosine_sim=cosine_sim):
     model = model.lower().strip()
 
@@ -52,6 +46,7 @@ def get_recommendations(model, cosine_sim=cosine_sim):
     idx = indices[model]
 
     sim_scores = list(enumerate(cosine_sim[idx]))
+
     sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
 
     sim_scores = sim_scores[1:11]  # top 10 excluding itself
@@ -60,7 +55,6 @@ def get_recommendations(model, cosine_sim=cosine_sim):
 
     return df.iloc[smart_indices][['model', 'brand_name', 'os']]
 
-# 5. USER INTERACTION
 print("--- Smartphone Recommender System ---")
 user_input = input("Enter Smartphone Name: ")
 
@@ -80,7 +74,6 @@ def evaluate_system(df, recommendations_func, k=10, sample_size=50):
     for _, row in test_samples.iterrows():
         target_name = row['model']
         target_brand = row['brand_name']
-        target_os = row['os']
 
         recommendations = recommendations_func(target_name)
 
