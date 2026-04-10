@@ -19,6 +19,7 @@ df['os'] = df['os'].str.lower().str.strip()
 df['processor_brand'] = df['processor_brand'].str.lower().str.strip()
 df['battery_capacity'] = pd.to_numeric(df['battery_capacity'], errors='coerce').fillna(0)
 df['ram_capacity'] = pd.to_numeric(df['ram_capacity'], errors='coerce').fillna(0)
+df['internal_memory'] = pd.to_numeric(df['internal_memory'], errors='coerce').fillna(0)
 df['refresh_rate'] = pd.to_numeric(df['refresh_rate'], errors='coerce').fillna(0)
 
 # 2. CREATE METADATA
@@ -28,6 +29,7 @@ df['metadata'] = (
     df['processor_brand'] + " " +
     df['battery_capacity'].astype(str) + " mAh " +
     df['ram_capacity'].astype(str) + " GB " +
+    df['internal_memory'].astype(str) + " GB " +
     df['refresh_rate'].astype(str) + " Hz"
 )
 
