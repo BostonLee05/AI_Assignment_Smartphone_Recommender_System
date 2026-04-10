@@ -4,7 +4,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 
 # 1. Load data
-df = pd.read_csv('../smartphones_data.csv.csv')
+df = pd.read_csv('../smartphones.csv')
 df.columns = df.columns.str.lower()
 df = df.fillna("")
 
