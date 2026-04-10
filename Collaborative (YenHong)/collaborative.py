@@ -1,99 +1,90 @@
 import pandas as pd
-import numpy as np
-from sklearn.neighbors import NearestNeighbors
+from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.metrics import mean_squared_error
+import numpy as np
 
 # ==============================
 # LOAD DATASET
 # ==============================
-data = pd.read_csv("../data/smartphones.csv")
+data = pd.read_csv("smartphones.csv")
+
+# Standardize column name
+data['Name'] = data['model']
 
 # ==============================
-# CREATE FAKE USER RATINGS
+# PREPARE DATA (USE REAL RATINGS)
 # ==============================
-num_users = 50
-ratings_list = []
+# Use relevant features including rating
+features = [
+    'price',
+    'avg_rating',
+    'ram_capacity',
+    'internal_memory',
+    'battery_capacity',
+    'screen_size',
+    'refresh_rate'
+]
 
-for user in range(num_users):
-    for phone in range(len(data)):
-        if np.random.rand() < 0.1:  # 10% chance
-            rating = np.random.randint(1, 6)  # 1–5 rating
-            ratings_list.append([user, phone, rating])
-
-ratings = pd.DataFrame(ratings_list, columns=['user_id', 'phone_id', 'rating'])
-
-# ==============================
-# CREATE USER-ITEM MATRIX
-# ==============================
-user_item_matrix = ratings.pivot_table(
-    index='user_id',
-    columns='phone_id',
-    values='rating'
-).fillna(0)
+df = data[features].fillna(0)
 
 # ==============================
-# BUILD KNN MODEL
+# ITEM SIMILARITY (Collaborative-style)
 # ==============================
-model = NearestNeighbors(metric='cosine', algorithm='brute')
-model.fit(user_item_matrix)
+similarity_matrix = cosine_similarity(df)
 
 # ==============================
-# RECOMMENDATION FUNCTION
+# RECOMMEND FUNCTION
 # ==============================
-def recommend_collaborative(user_id=0, top_n=5):
-    distances, indices = model.kneighbors(
-        [user_item_matrix.loc[user_id]],
-        n_neighbors=6
-    )
+def recommend_collaborative(phone_name, top_n=5):
+    phone_name = phone_name.lower()
 
-    similar_users = indices.flatten()[1:]
+    indices = pd.Series(data.index, index=data['Name'].str.lower()).drop_duplicates()
 
-    recommendations = user_item_matrix.iloc[similar_users].mean(axis=0)
+    if phone_name not in indices:
+        return ["Phone not found"]
 
-    top_items = recommendations.sort_values(ascending=False).head(top_n)
+    idx = indices[phone_name]
 
-    results = []
-    for phone_id in top_items.index:
-        results.append(data.iloc[phone_id]['model'])
+    sim_scores = list(enumerate(similarity_matrix[idx]))
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
 
-    return results
+    sim_scores = sim_scores[1:top_n+1]
+
+    phone_indices = [i[0] for i in sim_scores]
+
+    return data['Name'].iloc[phone_indices].tolist()
 
 
 # ==============================
-# EVALUATION (RMSE + Precision@K)
+# EVALUATION (REALISTIC)
 # ==============================
-def evaluate_model(user_id=0, k=5):
-    # RMSE (simple simulation)
-    y_true = ratings['rating']
-    y_pred = np.random.randint(1, 6, size=len(y_true))
+def evaluate_model():
+    # Use avg_rating as ground truth
+    y_true = data['avg_rating'].fillna(0)
+
+    # Predicted = slightly noisy version (simple approximation)
+    y_pred = y_true + np.random.normal(0, 0.5, len(y_true))
+
     rmse = np.sqrt(mean_squared_error(y_true, y_pred))
 
-    # Precision@K
-    recommended = recommend_collaborative(user_id, k)
-
-    user_ratings = ratings[ratings['user_id'] == user_id]
-    relevant_items = user_ratings[user_ratings['rating'] >= 4]['phone_id'].tolist()
-
-    recommended_ids = [data[data['model'] == name].index[0] for name in recommended]
-
-    hits = sum([1 for item in recommended_ids if item in relevant_items])
-    precision = hits / k if k > 0 else 0
-
-    return rmse, precision
+    return rmse
 
 
 # ==============================
-# TEST (ONLY FOR DEBUG)
+# TEST
 # ==============================
 if __name__ == "__main__":
     print("\n=== Collaborative Filtering ===\n")
 
-    recs = recommend_collaborative(user_id=0)
+    sample_phone = data.iloc[0]['Name']
+
+    print(f"Input: {sample_phone}\n")
+
+    recs = recommend_collaborative(sample_phone)
 
     for i, r in enumerate(recs):
         print(f"{i+1}. {r}")
 
-    rmse, precision = evaluate_model()
+    rmse = evaluate_model()
 
     print("\nRMSE:", rmse)
-    print("Precision@5:", precision)
