@@ -207,49 +207,30 @@ def run_hybrid():
 
     # Tab 3: Project Gantt Chart
     with tab3:
-        st.write("Gantt Chart")
+        st.subheader("Project Gantt Chart")
+        st.write("This timeline illustrates the chronological phases required to successfully develop the Hybrid Smartphone Recommender System.")
         
-        # Exact data from your uploaded image
+        # Data perfectly matching the 4 stages from Figure 3.5
         gantt_data = [
-            {"Phase": "Phase 1: Preparation", "Task": "Project planning & identify title", "Start (Week)": 1, "Duration (Weeks)": 2},
-            {"Phase": "Phase 1: Preparation", "Task": "Preparation of project proposal", "Start (Week)": 3, "Duration (Weeks)": 2},
-            {"Phase": "Phase 2: Define & Design", "Task": "Study & define project requirement", "Start (Week)": 5, "Duration (Weeks)": 2},
-            {"Phase": "Phase 2: Define & Design", "Task": "Design framework of systems", "Start (Week)": 7, "Duration (Weeks)": 2},
-            {"Phase": "Phase 3: Development", "Task": "Data collection & preprocessing", "Start (Week)": 9, "Duration (Weeks)": 2},
-            {"Phase": "Phase 3: Development", "Task": "System development & integration", "Start (Week)": 11, "Duration (Weeks)": 2},
-            {"Phase": "Phase 4: Output & Doc", "Task": "Evaluate & test final systems", "Start (Week)": 13, "Duration (Weeks)": 2},
-            {"Phase": "Phase 4: Output & Doc", "Task": "Document & finalize project report", "Start (Week)": 15, "Duration (Weeks)": 2}
+            {"Task": "Data Preprocessing", "Start": 1, "Duration": 2, "Color": "#85C1E9"}, # Light Blue
+            {"Task": "Algorithm Development", "Start": 3, "Duration": 4, "Color": "#3498DB"}, # Solid Blue
+            {"Task": "Hybrid Integration", "Start": 7, "Duration": 2, "Color": "#F5B7B1"}, # Pink/Light Red
+            {"Task": "UI & Deployment", "Start": 9, "Duration": 3, "Color": "#E74C3C"}  # Solid Red
         ]
         
         df_gantt = pd.DataFrame(gantt_data)
-        st.dataframe(df_gantt, use_container_width=True, hide_index=True)
-
-        st.markdown("---")
         
-        # Create a visual Gantt chart using matplotlib (no new libraries needed!)
-        fig_gantt, ax_gantt = plt.subplots(figsize=(10, 5))
+        # Create a visual Gantt chart using matplotlib
+        fig_gantt, ax_gantt = plt.subplots(figsize=(10, 4))
         
-        # Color coding the phases
-        colors = {
-            "Phase 1: Preparation": "#4c78a8",
-            "Phase 2: Define & Design": "#f58518",
-            "Phase 3: Development": "#54a24b",
-            "Phase 4: Output & Doc": "#e45756"
-        }
-        
-        # Draw horizontal bars
+        # Draw horizontal bars with the specific colors from the screenshot
         for i, row in df_gantt.iterrows():
-            ax_gantt.barh(row['Task'], row['Duration (Weeks)'], left=row['Start (Week)'], color=colors[row['Phase']], edgecolor='black')
+            ax_gantt.barh(row['Task'], row['Duration'], left=row['Start'], color=row['Color'], edgecolor='black')
         
-        # Formatting the chart to look nice
+        # Formatting the chart to look clean and professional
         ax_gantt.set_xlabel("Timeline (Weeks)")
-        ax_gantt.set_title("Visual Project Timeline")
-        ax_gantt.set_xticks(range(1, 18))
+        ax_gantt.set_ylabel("Task")
+        ax_gantt.set_xticks(range(1, 13)) # Sets X-axis from Week 1 to 12
         ax_gantt.invert_yaxis() # Puts the first task at the top instead of the bottom
-        
-        # Create a legend
-        import matplotlib.patches as mpatches
-        legend_handles = [mpatches.Patch(color=color, label=phase) for phase, color in colors.items()]
-        ax_gantt.legend(handles=legend_handles, loc='lower right')
         
         st.pyplot(fig_gantt)
