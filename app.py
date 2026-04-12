@@ -31,7 +31,7 @@ with tab2:
 # CONTENT
 with tab3:
     try:
-        from Content_Based.content_based import run_content_based
+        from Content_Based.streamlit_content_based import run_content_based
         run_content_based()
     except Exception as e:
         st.error("Error loading Content-Based module")

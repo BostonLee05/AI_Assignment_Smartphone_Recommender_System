@@ -84,10 +84,10 @@ def run_hybrid():
     # ==========================================
     st.title("📱 Hybrid Smartphone Recommender")
 
-    tab1, tab2 = st.tabs(["🎯 Live Recommendations", "📊 System Evaluation"])
+    inner_tab1, inner_tab2 = st.tabs(["🎯 Live Recommendations", "📊 System Evaluation"])
 
     # --- TAB 1: RECOMMENDATIONS ---
-    with tab1:
+    with inner_tab1:
         selected_user = st.slider("Select User ID to generate recommendations:", 1, 50, 1)
         st.subheader(f"Top 5 Recommendations for User {selected_user}")
         
@@ -114,7 +114,7 @@ def run_hybrid():
             st.dataframe(recs, use_container_width=True)
 
     # --- TAB 2: METRICS VS K (YOUR EXACT CODE) ---
-    with tab2:
+    with inner_tab2:
         st.subheader("📊 Evaluation Metrics vs K")
 
         if st.button("Generate Evaluation Chart"):
