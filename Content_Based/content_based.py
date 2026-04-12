@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 
-df = pd.read_csv('../smartphones.csv')
+df = pd.read_csv('smartphones.csv')
 # fill missing values
 df = df.fillna('')
 
