@@ -142,7 +142,7 @@ def run_content_based():
 
     user_input = st.text_input("Enter Smartphone Name:")
 
-    if st.button("Get Recommendations"):
+    if st.button("Get Recommendations", key="cb_recommend"):
         results = get_recommendations(user_input)
 
         if results is None:
@@ -153,7 +153,7 @@ def run_content_based():
 
     st.subheader("📊 Evaluation Metrics vs K")
 
-    if st.button("Generate Evaluation Chart"):
+    if st.button("Generate Evaluation Chart", key="cb_eval"):
         k_values = list(range(1, 11))
 
         precision_scores = []
