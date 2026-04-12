@@ -3,6 +3,9 @@ def run_hybrid():
     import pandas as pd
     import numpy as np
     import matplotlib.pyplot as plt
+    from sklearn.metrics.pairwise import cosine_similarity
+    from sklearn.preprocessing import MinMaxScaler
+    from sklearn.metrics import mean_squared_error
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.metrics.pairwise import cosine_similarity
     from sklearn.preprocessing import MinMaxScaler
@@ -122,7 +125,31 @@ def run_hybrid():
     # Tab 2: Show evaluation metrics
     with tab2:
         if st.button("Generate Evaluation Chart"):
-            with st.spinner("Running calculations for K=1 to 10. This might take a moment..."):
+            with st.spinner("Running calculations for RMSE and K=1 to 10. This might take a moment..."):
+                
+                # --- 1. CALCULATE RMSE ---
+                actuals = []
+                predictions = []
+                
+                # Sample 200 random user ratings to test the system's accuracy
+                for _, row in df_ratings.sample(200, random_state=42).iterrows():
+                    u = row['user_id']
+                    m = row['model']
+                    actual_rating = row['rating']
+                    
+                    cb = predict_cb(u, m)
+                    cf = predict_cf(u, m)
+                    glob = df_items.loc[df_items['model'] == m, 'normalized_avg_rating'].values[0] if m in df_items['model'].values else 0
+                    
+                    hybrid_prediction = (0.5 * cf) + (0.3 * cb) + (0.2 * glob)
+                    
+                    actuals.append(actual_rating)
+                    predictions.append(hybrid_prediction)
+                
+                # Calculate the Root Mean Squared Error
+                rmse_score = np.sqrt(mean_squared_error(actuals, predictions))
+                
+                # --- 2. CALCULATE PRECISION, RECALL, F1 vs K ---
                 k_values = list(range(1, 11))
                 precision_scores = []
                 recall_scores = []
@@ -169,7 +196,7 @@ def run_hybrid():
                     recall_scores.append(avg_r)
                     f1_scores.append(f1)
 
-                # plot using matplotlib
+                # --- 3. PLOT THE CHART ---
                 fig, ax = plt.subplots()
 
                 ax.plot(k_values, precision_scores, marker='o', label='Precision')
@@ -183,7 +210,7 @@ def run_hybrid():
 
                 st.pyplot(fig)
 
-                # result table
+                # --- 4. SHOW RESULTS TABLE ---
                 result_df = pd.DataFrame({
                     'K': k_values,
                     'Precision': precision_scores,
@@ -193,17 +220,19 @@ def run_hybrid():
 
                 st.dataframe(result_df, use_container_width=True)
 
-                # average metric cards
+                # --- 5. SHOW ALL 4 METRICS CARDS ---
                 avg_precision = np.mean(precision_scores)
                 avg_recall = np.mean(recall_scores)
                 avg_f1 = np.mean(f1_scores)
 
-                st.subheader("Average Evaluation Metrics")
+                st.subheader("System Evaluation Scores")
 
-                col1, col2, col3 = st.columns(3)
-                col1.metric("Avg Precision", f"{avg_precision:.4f}")
-                col2.metric("Avg Recall", f"{avg_recall:.4f}")
-                col3.metric("Avg F1-score", f"{avg_f1:.4f}")
+                # Changed to 4 columns to include RMSE!
+                col1, col2, col3, col4 = st.columns(4)
+                col1.metric("RMSE (Lower is Better)", f"{rmse_score:.4f}")
+                col2.metric("Avg Precision@K", f"{avg_precision:.4f}")
+                col3.metric("Avg Recall@K", f"{avg_recall:.4f}")
+                col4.metric("Avg F1-score", f"{avg_f1:.4f}")
 
     # Tab 3: Project Gantt Chart
     with tab3:
