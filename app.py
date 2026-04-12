@@ -18,7 +18,7 @@ with tab1:
     st.subheader("Hybrid Recommendation System")
 
     try:
-        import Hybrid.hybrid_recommendation
+        import Hybrid.streamlit_hybrid
     except Exception as e:
         st.error("Error loading Hybrid module")
         st.exception(e)
@@ -39,7 +39,7 @@ with tab2:
 # TAB 3 (CONTENT BASED)
 # ==============================
 with tab3:
-    st.subheader("📊 Content-Based Recommendation")
+    st.subheader("Content-Based Recommendation")
 
     try:
         import Content_Based.streamlit_content_based
