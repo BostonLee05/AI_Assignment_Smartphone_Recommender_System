@@ -13,7 +13,8 @@ tab1, tab2, tab3 = st.tabs([
 # HYBRID
 with tab1:
     try:
-        import Hybrid.streamlit_hybrid
+        from Hybrid.streamlit_hybrid import run_hybrid
+        run_hybrid()
     except Exception as e:
         st.error("Error loading Hybrid module")
         st.exception(e)
