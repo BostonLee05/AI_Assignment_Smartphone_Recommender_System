@@ -43,7 +43,7 @@ with tab3:
     st.subheader("📊 Content-Based Recommendation")
 
     try:
-        import Content_Based.content_based
+        import Content_Based.streamlit_content_based
     except Exception as e:
         st.error("Error loading Content-Based module")
         st.exception(e)
