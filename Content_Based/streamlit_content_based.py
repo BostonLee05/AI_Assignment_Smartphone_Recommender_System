@@ -136,7 +136,7 @@ def run_content_based():
     # ==============================
     # STREAMLIT UI
     # ==============================
-    st.title("📱 Smartphone Recommendation System")
+    st.title("📱 Content Based Recommendation System")
 
     user_input = st.text_input("Enter Smartphone Name:")
 
