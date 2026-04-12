@@ -13,12 +13,7 @@ tab1, tab2, tab3 = st.tabs([
 # HYBRID
 with tab1:
     try:
-<<<<<<< HEAD
         import Hybrid.streamlit_hybrid
-=======
-        from Hybrid.hybrid_recommendation import run_hybrid
-        run_hybrid()
->>>>>>> eadb0a9e7724e7b93bb7292dc643f202de1dc5f3
     except Exception as e:
         st.error("Error loading Hybrid module")
         st.exception(e)
@@ -34,11 +29,8 @@ with tab2:
 
 # CONTENT
 with tab3:
-<<<<<<< HEAD
     st.subheader("Content-Based Recommendation")
 
-=======
->>>>>>> eadb0a9e7724e7b93bb7292dc643f202de1dc5f3
     try:
         from Content_Based.streamlit_content_based import run_content_based
         run_content_based()
