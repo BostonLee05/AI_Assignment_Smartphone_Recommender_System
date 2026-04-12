@@ -6,8 +6,6 @@ def run_content_based():
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.metrics.pairwise import linear_kernel
 
-    st.title("📱 Smartphone Recommendation System")
-
     # ==============================
     # LOAD DATA
     # ==============================
