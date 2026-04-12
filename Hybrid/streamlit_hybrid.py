@@ -87,15 +87,14 @@ def run_hybrid():
     # FRONTEND LOGIC: STREAMLIT UI & DASHBOARD
     # --------------------------------------------------------
 
-    st.set_page_config(page_title="Hybrid AI Recommender", layout="wide")
-    st.title("Hybrid Smartphone Recommender System")
+    st.subheader("Hybrid Recommendations")
 
-    tab1, tab2 = st.tabs(["Live Recommendations", "System Evaluation"])
+    # Added tab3 here for the Gantt Chart
+    tab1, tab2, tab3 = st.tabs(["Live Recommendations", "System Evaluation", "Project Timeline"])
 
     # Tab 1: Show recommendations for a specific user
     with tab1:
         selected_user = st.slider("Select User ID to generate recommendations:", 1, 50, 1)
-        st.subheader(f"Top 5 Recommendations for User {selected_user}")
         
         with st.spinner("Calculating custom hybrid scores..."):
             all_models = df_items['model'].unique()
@@ -122,8 +121,6 @@ def run_hybrid():
 
     # Tab 2: Show evaluation metrics
     with tab2:
-        st.subheader("Evaluation Metrics vs K")
-
         if st.button("Generate Evaluation Chart"):
             with st.spinner("Running calculations for K=1 to 10. This might take a moment..."):
                 k_values = list(range(1, 11))
@@ -207,3 +204,52 @@ def run_hybrid():
                 col1.metric("Avg Precision", f"{avg_precision:.4f}")
                 col2.metric("Avg Recall", f"{avg_recall:.4f}")
                 col3.metric("Avg F1-score", f"{avg_f1:.4f}")
+
+    # Tab 3: Project Gantt Chart
+    with tab3:
+        st.write("Gantt Chart")
+        
+        # Exact data from your uploaded image
+        gantt_data = [
+            {"Phase": "Phase 1: Preparation", "Task": "Project planning & identify title", "Start (Week)": 1, "Duration (Weeks)": 2},
+            {"Phase": "Phase 1: Preparation", "Task": "Preparation of project proposal", "Start (Week)": 3, "Duration (Weeks)": 2},
+            {"Phase": "Phase 2: Define & Design", "Task": "Study & define project requirement", "Start (Week)": 5, "Duration (Weeks)": 2},
+            {"Phase": "Phase 2: Define & Design", "Task": "Design framework of systems", "Start (Week)": 7, "Duration (Weeks)": 2},
+            {"Phase": "Phase 3: Development", "Task": "Data collection & preprocessing", "Start (Week)": 9, "Duration (Weeks)": 2},
+            {"Phase": "Phase 3: Development", "Task": "System development & integration", "Start (Week)": 11, "Duration (Weeks)": 2},
+            {"Phase": "Phase 4: Output & Doc", "Task": "Evaluate & test final systems", "Start (Week)": 13, "Duration (Weeks)": 2},
+            {"Phase": "Phase 4: Output & Doc", "Task": "Document & finalize project report", "Start (Week)": 15, "Duration (Weeks)": 2}
+        ]
+        
+        df_gantt = pd.DataFrame(gantt_data)
+        st.dataframe(df_gantt, use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+        
+        # Create a visual Gantt chart using matplotlib (no new libraries needed!)
+        fig_gantt, ax_gantt = plt.subplots(figsize=(10, 5))
+        
+        # Color coding the phases
+        colors = {
+            "Phase 1: Preparation": "#4c78a8",
+            "Phase 2: Define & Design": "#f58518",
+            "Phase 3: Development": "#54a24b",
+            "Phase 4: Output & Doc": "#e45756"
+        }
+        
+        # Draw horizontal bars
+        for i, row in df_gantt.iterrows():
+            ax_gantt.barh(row['Task'], row['Duration (Weeks)'], left=row['Start (Week)'], color=colors[row['Phase']], edgecolor='black')
+        
+        # Formatting the chart to look nice
+        ax_gantt.set_xlabel("Timeline (Weeks)")
+        ax_gantt.set_title("Visual Project Timeline")
+        ax_gantt.set_xticks(range(1, 18))
+        ax_gantt.invert_yaxis() # Puts the first task at the top instead of the bottom
+        
+        # Create a legend
+        import matplotlib.patches as mpatches
+        legend_handles = [mpatches.Patch(color=color, label=phase) for phase, color in colors.items()]
+        ax_gantt.legend(handles=legend_handles, loc='lower right')
+        
+        st.pyplot(fig_gantt)
