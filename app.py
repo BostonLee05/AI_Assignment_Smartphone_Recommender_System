@@ -15,8 +15,13 @@ tab1, tab2, tab3 = st.tabs([
 # TAB 1 (HYBRID)
 # ==============================
 with tab1:
-    st.subheader("Hybrid Recommendation")
-    
+    st.subheader("Hybrid Recommendation System")
+
+    try:
+        import Hybrid.hybrid_recommendation
+    except Exception as e:
+        st.error("Error loading Hybrid module")
+        st.exception(e)
 
 # ==============================
 # TAB 2 (COLLABORATIVE)
@@ -35,5 +40,10 @@ with tab2:
 # TAB 3 (CONTENT BASED)
 # ==============================
 with tab3:
-    st.subheader("Content-Based Recommendation")
-    
+    st.subheader("📊 Content-Based Recommendation")
+
+    try:
+        import Content_Based.content_based
+    except Exception as e:
+        st.error("Error loading Content-Based module")
+        st.exception(e)
