@@ -1,4 +1,5 @@
 import streamlit as st
+import importlib
 
 st.set_page_config(page_title="Smartphone Recommender System", layout="centered")
 
@@ -18,7 +19,8 @@ with tab1:
     st.subheader("Hybrid Recommendation System")
 
     try:
-        import Hybrid.hybrid_recommendation
+        import Hybrid.hybrid_recommendation as hybrid
+        importlib.reload(hybrid)
     except Exception as e:
         st.error("Error loading Hybrid module")
         st.exception(e)
@@ -43,7 +45,8 @@ with tab3:
     st.subheader("📊 Content-Based Recommendation")
 
     try:
-        import Content_Based.streamlit_content_based
+        import Content_Based.streamlit_content_based as content_based
+        importlib.reload(content_based)
     except Exception as e:
         st.error("Error loading Content-Based module")
         st.exception(e)
