@@ -47,13 +47,10 @@ def run_collaborative():
     # ==============================
     # USER INPUT
     # ==============================
-    st.subheader("⭐ Rate Some Smartphones (IMPORTANT!)")
+    st.subheader("⭐ Rate Some Smartphones")
 
-    # Reset / Randomize button
-    if st.button("🔄 Randomize Phones"):
+    if st.button("🔄 Randomize Phones", key="cf_random"):
         st.session_state.sample_phones = data.sample(5)
-
-        # Clear slider values
         for key in list(st.session_state.keys()):
             if key.startswith("phone_"):
                 del st.session_state[key]
@@ -65,7 +62,11 @@ def run_collaborative():
     user_ratings = {}
 
     for idx, row in sample.iterrows():
-        rating = st.slider(f"{row['Name']}", 1, 5, 3)
+        rating = st.slider(
+            f"{row['Name']}",
+            1, 5, 3,
+            key=f"phone_{idx}"
+        )
         user_ratings[idx] = rating
 
     # ==============================
@@ -96,7 +97,6 @@ def run_collaborative():
 
         scores = weighted_scores / (total_weights + 1e-8)
 
-        # Remove already rated
         for i in range(len(user_vector)):
             if user_vector[i] > 0:
                 scores[i] = 0
@@ -115,7 +115,7 @@ def run_collaborative():
     # ==============================
     # DISPLAY RECOMMENDATIONS
     # ==============================
-    if st.button("🚀 Get Recommendations"):
+    if st.button("🚀 Get Recommendations", key="cf_recommend"):
 
         user_vector = create_user_vector()
         recs = recommend(user_vector)
@@ -146,10 +146,7 @@ def run_collaborative():
 
         user_vector = create_user_vector()
 
-        # Relevant = phones user likes (>=4)
         relevant = [i for i, r in user_ratings.items() if r >= 4]
-
-        # If no relevant → avoid empty
         if len(relevant) == 0:
             relevant = [i for i, r in user_ratings.items()]
 
@@ -161,18 +158,15 @@ def run_collaborative():
                 idx = data[data['Name'] == name].index[0]
                 recommended_ids.append(idx)
 
-            # ✅ NEW LOGIC (SIMILARITY-BASED MATCH)
             hits = 0
             for rec in recommended_ids:
                 for rel in relevant:
-                    # If both phones have similar rating range
                     if abs(data.iloc[rec]['avg_rating'] - data.iloc[rel]['avg_rating']) < 0.5:
                         hits += 1
                         break
 
-            precision = hits / k if k > 0 else 0
-            recall = hits / len(relevant) if len(relevant) > 0 else 0
-
+            precision = hits / k
+            recall = hits / len(relevant)
             f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0
 
             precision_list.append(precision)
@@ -180,7 +174,6 @@ def run_collaborative():
             f1_list.append(f1)
 
         return k_values, precision_list, recall_list, f1_list
-
 
     def plot_metrics():
         k, precision, recall, f1 = calculate_metrics()
@@ -190,19 +183,35 @@ def run_collaborative():
         plt.plot(k, recall, marker='s', label='Recall')
         plt.plot(k, f1, marker='^', label='F1-score')
 
-        plt.xlabel("K (Top Recommendations)")
+        plt.xlabel("K")
         plt.ylabel("Score")
         plt.title("Evaluation Metrics vs K")
         plt.legend()
 
-        st.pyplot(plt)
-
+        st.pyplot(plt.gcf())
 
     # ==============================
     # SHOW EVALUATION
     # ==============================
     st.subheader("📊 Model Evaluation")
 
-    if st.button("Run Evaluation (Precision@K)"):
+    if st.button("Run Evaluation (Precision@K)", key="cf_eval"):
         plot_metrics()
 
+    # ==============================
+    # NICE DEMO TABLE (NEW 🔥)
+    # ==============================
+    st.subheader("👥 How Collaborative Filtering Works")
+
+    st.markdown("""
+    This table shows how different users rate different smartphones.
+    The system finds users with similar patterns and recommends phones accordingly.
+    """)
+
+    sample_users = user_item_matrix.iloc[:5, :6].copy()
+    sample_users.columns = [data.iloc[i]['Name'] for i in sample_users.columns]
+    sample_users.index = [f"User {i}" for i in sample_users.index]
+
+    st.dataframe(sample_users, use_container_width=True)
+
+    st.info("💡 0 = no rating | Higher values = stronger preference")
