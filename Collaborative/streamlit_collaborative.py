@@ -70,6 +70,24 @@ def run_collaborative():
         user_ratings[idx] = rating
 
     # ==============================
+    # NICE DEMO TABLE (NEW 🔥)
+    # ==============================
+    st.subheader("👥 How Collaborative Filtering Works")
+
+    st.markdown("""
+    This table shows how different users rate different smartphones.
+    The system finds users with similar patterns and recommends phones accordingly.
+    """)
+
+    sample_users = user_item_matrix.iloc[:5, :6].copy()
+    sample_users.columns = [data.iloc[i]['Name'] for i in sample_users.columns]
+    sample_users.index = [f"User {i}" for i in sample_users.index]
+
+    st.dataframe(sample_users, use_container_width=True)
+
+    st.info("💡 0 = no rating | Higher values = stronger preference")
+    
+    # ==============================
     # CREATE USER VECTOR
     # ==============================
     def create_user_vector():
@@ -198,20 +216,3 @@ def run_collaborative():
     if st.button("Run Evaluation (Precision@K)", key="cf_eval"):
         plot_metrics()
 
-    # ==============================
-    # NICE DEMO TABLE (NEW 🔥)
-    # ==============================
-    st.subheader("👥 How Collaborative Filtering Works")
-
-    st.markdown("""
-    This table shows how different users rate different smartphones.
-    The system finds users with similar patterns and recommends phones accordingly.
-    """)
-
-    sample_users = user_item_matrix.iloc[:5, :6].copy()
-    sample_users.columns = [data.iloc[i]['Name'] for i in sample_users.columns]
-    sample_users.index = [f"User {i}" for i in sample_users.index]
-
-    st.dataframe(sample_users, use_container_width=True)
-
-    st.info("💡 0 = no rating | Higher values = stronger preference")
