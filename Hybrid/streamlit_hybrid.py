@@ -128,24 +128,27 @@ def run_hybrid():
     # FRONTEND LOGIC: STREAMLIT UI & DASHBOARD
     # --------------------------------------------------------
 
-    st.subheader("Hybrid Recommendations")
+    st.title("🤝📱 Ultimate Hybrid Recommendation System")
+    st.write("Combine your explicit preferences (search) with your implicit behavior (ratings) for perfect recommendations.")
 
-    tab1, tab2 = st.tabs(["Live Recommendations", "System Evaluation"])
+    tab1, tab2 = st.tabs(["🎯 Live Recommendations", "📊 System Evaluation"])
 
-    # Tab 1: Show recommendations for the LIVE user
+    # --- TAB 1: LIVE RECOMMENDATIONS ---
     with tab1:
         st.markdown("### Step 1: Target a Specific Phone (Content-Based)")
-        # User input for Content-Based
         target_phone_input = st.text_input("Enter a Smartphone Name to find similar specs:", placeholder="e.g., Apple iPhone 14")
         
         st.divider()
         
         st.markdown("### Step 2: Rate Phones (Collaborative Filtering)")
-        if st.button("🔄 Randomize Phones", key="collaborative_randomize_btn"):
+        
+        # Bulletproof Randomize Button
+        if st.button("🔄 Randomize Phones", key="hybrid_randomize_btn"):
             st.session_state.live_sample = df_items.sample(5)
             for key in list(st.session_state.keys()):
                 if key.startswith("live_rating_"):
                     del st.session_state[key]
+            st.rerun()
 
         if "live_sample" not in st.session_state:
             st.session_state.live_sample = df_items.sample(5)
@@ -153,15 +156,15 @@ def run_hybrid():
         live_ratings = {}
         for idx, row in st.session_state.live_sample.iterrows():
             model_name = row['model']
+            # Unique keys for the hybrid sliders
             rating = st.slider(f"Rate {model_name}", 1, 5, 3, key=f"live_rating_{idx}")
             live_ratings[model_name] = rating
         
-        if st.button("🚀 Get Hybrid Recommendations"):
+        if st.button("🚀 Get Ultimate Hybrid Recommendations", key="hybrid_rec_btn"):
             with st.spinner("Calculating custom hybrid scores..."):
                 all_models = df_items['model'].unique()
                 unrated = [m for m in all_models if m not in live_ratings.keys() and m != target_phone_input]
                 
-                # Check if target phone exists in dataset
                 valid_target = None
                 if target_phone_input:
                     match = df_items[df_items['model'].str.contains(target_phone_input, case=False, na=False)]
@@ -172,13 +175,11 @@ def run_hybrid():
                         st.warning("Phone not found in database. Relying on your slider ratings instead.")
 
                 results = []
-                # Process a sample of unrated phones to keep computation fast
                 for m in unrated[:150]: 
                     cb = predict_live_cb(live_ratings, valid_target, m)
                     cf = predict_live_cf(live_ratings, m)
                     glob = df_items.loc[df_items['model'] == m, 'normalized_avg_rating'].values[0]
                     
-                    # If target phone is found, give CB slightly more weight
                     if valid_target:
                         final = (0.3 * cf) + (0.5 * cb) + (0.2 * glob)
                     else:
@@ -194,9 +195,9 @@ def run_hybrid():
                 recs = pd.DataFrame(results).sort_values(by='Hybrid Score', ascending=False).head(5)
                 st.dataframe(recs, use_container_width=True)
 
-    # Tab 2: Show evaluation metrics (Exactly as you originally wrote it)
+    # --- TAB 2: SYSTEM EVALUATION ---
     with tab2:
-        if st.button("Generate Evaluation Chart"):
+        if st.button("Generate Evaluation Chart", key="hybrid_eval_btn"):
             with st.spinner("Running calculations for RMSE and K=1 to 10. This might take a moment..."):
                 
                 # --- 1. CALCULATE RMSE ---
