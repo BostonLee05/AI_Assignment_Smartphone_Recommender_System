@@ -141,7 +141,7 @@ def run_hybrid():
         st.divider()
         
         st.markdown("### Step 2: Rate Phones (Collaborative Filtering)")
-        if st.button("🔄 Randomize Phones"):
+        if st.button("🔄 Randomize Phones", key="collaborative_randomize_btn"):
             st.session_state.live_sample = df_items.sample(5)
             for key in list(st.session_state.keys()):
                 if key.startswith("live_rating_"):
