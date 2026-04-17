@@ -7,13 +7,12 @@ def run_hybrid():
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.metrics.pairwise import linear_kernel
     from sklearn.preprocessing import MinMaxScaler
-    from sklearn.metrics import mean_squared_error
     import warnings
 
     warnings.filterwarnings('ignore')
 
-    st.title("🤝📱 Hybrid Recommendation System")
-    st.write("Combining Collaborative Filtering (User behavior) and Content-Based (Phone specs) for the ultimate recommendation engine.")
+    st.title("🤝📱 Ultimate Hybrid Recommendation System")
+    st.write("Combine your explicit preferences (search) with your implicit behavior (ratings) for perfect recommendations.")
 
     # ==============================
     # 1. LOAD & PREP DATA
@@ -30,7 +29,7 @@ def run_hybrid():
         scaler = MinMaxScaler(feature_range=(0, 1))
         df['normalized_avg_rating'] = scaler.fit_transform(df[['avg_rating']])
 
-        # Content-Based Metadata Prep (from your Content-Based script)
+        # Content-Based Metadata Prep
         for col in ['brand_name', 'os', 'processor_brand']:
             df[col] = df[col].astype(str).str.lower().str.strip()
             
@@ -89,12 +88,16 @@ def run_hybrid():
 
     # --- TAB 1: LIVE RECOMMENDATIONS ---
     with tab1:
-        st.subheader("⭐ Step 1: Rate Some Smartphones")
-        st.write("Rate these phones to build your profile. The hybrid engine will analyze **users similar to you (CF)** AND **specs similar to phones you like (CB)**.")
+        st.subheader("Step 1: Target a Specific Phone (Optional)")
+        target_phone = st.text_input("🔍 Enter a Smartphone Name to find similar specs (Content-Based):", placeholder="e.g., Apple iPhone 14")
+        
+        st.divider()
+        
+        st.subheader("Step 2: Rate Phones to Build Your Profile")
+        st.write("Rate these random phones. We will find users with similar tastes (Collaborative).")
 
-        if st.button("🔄 Randomize Phones"):
+        if st.button("🔄 Randomize Rating Phones"):
             st.session_state.sample_phones = data.sample(5)
-            # Clear slider values
             for key in list(st.session_state.keys()):
                 if key.startswith("h_phone_"):
                     del st.session_state[key]
@@ -110,10 +113,10 @@ def run_hybrid():
             user_ratings[idx] = rating
 
         # --- HYBRID RECOMMENDATION ENGINE ---
-        if st.button("🚀 Get Hybrid Recommendations"):
+        if st.button("🚀 Get Ultimate Hybrid Recommendations"):
             with st.spinner("Calculating custom hybrid scores..."):
                 
-                # 1. Create User Vector
+                # 1. Create User Vector for Collaborative Filtering
                 user_vector = np.zeros(len(data))
                 for i, r in user_ratings.items():
                     user_vector[i] = r
@@ -134,34 +137,53 @@ def run_hybrid():
                 if cf_scores.max() > 0:
                     cf_scores = cf_scores / cf_scores.max() # Normalize 0-1
 
-                # 3. Content-Based Scores (Similar Specs to Liked Phones)
+                # 3. Content-Based Scores (Text Input OR Liked Phones)
                 cb_scores = np.zeros(len(data))
-                liked_items = [i for i, r in user_ratings.items() if r >= 4]
+                
+                # Check if user entered a specific target phone
+                target_matched = False
+                if target_phone:
+                    phone_match = data[data['Name'].str.lower().str.strip() == target_phone.lower().strip()]
+                    if not phone_match.empty:
+                        target_idx = phone_match.index[0]
+                        cb_scores = cosine_sim[target_idx]
+                        target_matched = True
+                        st.success(f"✅ Found '{data.iloc[target_idx]['Name']}'! Heavily weighting recommendations towards similar specs.")
+                    else:
+                        st.warning(f"⚠️ Could not find '{target_phone}' in the database. Falling back to your slider ratings for Content matching.")
 
-                if liked_items:
-                    for item_idx in liked_items:
-                        rating_weight = user_ratings[item_idx] / 5.0
-                        cb_scores += cosine_sim[item_idx] * rating_weight
-                    
-                    if cb_scores.max() > 0:
-                        cb_scores = cb_scores / cb_scores.max() # Normalize 0-1
-                else:
-                    # If user didn't rate anything highly, fallback to general similarity of all rated items
-                    for item_idx, r in user_ratings.items():
-                        cb_scores += cosine_sim[item_idx] * (r / 5.0)
-                    if cb_scores.max() > 0:
-                        cb_scores = cb_scores / cb_scores.max()
+                # If no target phone entered OR target phone not found, fallback to slider ratings
+                if not target_matched:
+                    liked_items = [i for i, r in user_ratings.items() if r >= 4]
+                    if liked_items:
+                        for item_idx in liked_items:
+                            rating_weight = user_ratings[item_idx] / 5.0
+                            cb_scores += cosine_sim[item_idx] * rating_weight
+                    else:
+                        # Fallback if no ratings >= 4
+                        for item_idx, r in user_ratings.items():
+                            cb_scores += cosine_sim[item_idx] * (r / 5.0)
+                            
+                if cb_scores.max() > 0:
+                    cb_scores = cb_scores / cb_scores.max() # Normalize 0-1
 
-                # 4. Global Scores
+                # 4. Global Popularity Scores
                 global_scores = data['normalized_avg_rating'].values
 
-                # 5. Hybrid Weighted Score
-                # Weights: 45% Collab, 45% Content, 10% Global Popularity
-                hybrid_scores = (0.45 * cf_scores) + (0.45 * cb_scores) + (0.10 * global_scores)
+                # 5. Hybrid Weighted Score Calculation
+                # If they explicitly searched for a phone, give Content-Based a slightly higher weight
+                if target_matched:
+                    hybrid_scores = (0.35 * cf_scores) + (0.55 * cb_scores) + (0.10 * global_scores)
+                else:
+                    hybrid_scores = (0.45 * cf_scores) + (0.45 * cb_scores) + (0.10 * global_scores)
 
-                # Remove already rated
+                # Remove already rated items from recommendations
                 for i in user_ratings.keys():
                     hybrid_scores[i] = -1
+                    
+                # Remove the target search phone itself from recommendations
+                if target_matched:
+                    hybrid_scores[target_idx] = -1
 
                 top_indices = np.argsort(hybrid_scores)[-5:][::-1]
 
@@ -181,7 +203,6 @@ def run_hybrid():
                     with col2:
                         st.markdown(f"🏆 **Score: {h_score:.2f}**")
                     
-                    # Progress bars to show WHY it was recommended
                     st.progress(cf_val, text=f"Collaborative Match: {cf_val:.2f}")
                     st.progress(cb_val, text=f"Content Match: {cb_val:.2f}")
                     st.divider()
@@ -189,33 +210,30 @@ def run_hybrid():
     # --- TAB 2: SYSTEM EVALUATION ---
     with tab2:
         st.subheader("📊 Model Evaluation")
-        st.write("Evaluates the current live user's vector across K recommendations to calculate Precision, Recall, and F1-Score.")
+        st.write("Evaluates the current live user's vector across K recommendations.")
 
         if st.button("Run Hybrid Evaluation (Precision@K)"):
             with st.spinner("Calculating metrics..."):
                 k_values = list(range(1, 11))
-                precision_list = []
-                recall_list = []
-                f1_list = []
+                precision_list, recall_list, f1_list = [], [], []
 
-                # Rebuild user vector
                 user_vector = np.zeros(len(data))
                 for i, r in user_ratings.items():
                     user_vector[i] = r
 
-                # Ground Truth: Phones the user rated >= 4
                 relevant_ids = [i for i, r in user_ratings.items() if r >= 4]
                 if not relevant_ids:
-                    relevant_ids = list(user_ratings.keys()) # Fallback if none rated highly
+                    relevant_ids = list(user_ratings.keys()) 
 
-                # Pre-calculate full scores once for evaluation
                 distances, indices = cf_model.kneighbors([user_vector], n_neighbors=6)
                 sim_weights = 1 - distances.flatten()[1:]
                 cf_eval = np.zeros(len(data))
                 tot_weights = np.zeros(len(data))
+                
                 for idx, user in enumerate(indices.flatten()[1:]):
                     cf_eval += user_item_matrix.iloc[user].values * sim_weights[idx]
                     tot_weights += sim_weights[idx]
+                
                 cf_eval = cf_eval / (tot_weights + 1e-8)
                 if cf_eval.max() > 0: cf_eval = cf_eval / cf_eval.max()
 
@@ -226,7 +244,6 @@ def run_hybrid():
 
                 hybrid_eval = (0.5 * cf_eval) + (0.5 * cb_eval)
                 
-                # Remove rated items from recommendations pool
                 for i in user_ratings.keys():
                     hybrid_eval[i] = -1
 
@@ -234,15 +251,7 @@ def run_hybrid():
 
                 for k in k_values:
                     top_k = ranked_items[:k]
-                    
-                    # Similarity Match Logic (If recommended item shares identical brand/specs with a relevant item)
-                    hits = 0
-                    for rec in top_k:
-                        for rel in relevant_ids:
-                            # Consider a "hit" if cosine sim between recommended and relevant is > 0.6
-                            if cosine_sim[rec][rel] > 0.6:
-                                hits += 1
-                                break
+                    hits = sum(1 for rec in top_k for rel in relevant_ids if cosine_sim[rec][rel] > 0.6)
                                 
                     precision = hits / k if k > 0 else 0
                     recall = hits / len(relevant_ids) if len(relevant_ids) > 0 else 0
@@ -252,9 +261,6 @@ def run_hybrid():
                     recall_list.append(recall)
                     f1_list.append(f1)
 
-                # ==============================
-                # PLOTS AND METRICS
-                # ==============================
                 fig, ax = plt.subplots()
                 ax.plot(k_values, precision_list, marker='o', label='Precision')
                 ax.plot(k_values, recall_list, marker='s', label='Recall')
