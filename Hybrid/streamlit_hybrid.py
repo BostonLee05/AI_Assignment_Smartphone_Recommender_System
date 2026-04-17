@@ -93,7 +93,7 @@ def run_hybrid():
     st.subheader("Hybrid Recommendations")
 
     # Added tab3 here for the Gantt Chart
-    tab1, tab2, tab3 = st.tabs(["Live Recommendations", "System Evaluation", "Project Timeline"])
+    tab1, tab2 = st.tabs(["Live Recommendations", "System Evaluation"])
 
     # Tab 1: Show recommendations for a specific user
     with tab1:
