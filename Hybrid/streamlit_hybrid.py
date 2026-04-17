@@ -13,7 +13,7 @@ def run_hybrid():
     warnings.filterwarnings('ignore')
 
     # --------------------------------------------------------
-    # BACKEND LOGIC: DATA PREP & HYBRID MODELS
+    # DATA PREPARATION & MODEL BUILDING
     # --------------------------------------------------------
 
     @st.cache_data
@@ -21,6 +21,7 @@ def run_hybrid():
         df = pd.read_csv('smartphones.csv')
         df = df.drop_duplicates(subset=['model']).reset_index(drop=True)
         
+        # Fill missing ratings with the dataset mean
         df['avg_rating'] = df['avg_rating'].fillna(df['avg_rating'].mean())
         
         for col in df.columns:
@@ -29,9 +30,11 @@ def run_hybrid():
             else:
                 df[col] = df[col].fillna(0)
                 
+        # Normalize the average rating to a 0-1 scale for the global score component
         scaler = MinMaxScaler(feature_range=(0, 5))
         df['normalized_avg_rating'] = scaler.fit_transform(df[['avg_rating']])
         
+        # Combine phone specifications into a single text feature for TF-IDF
         df['content_features'] = (
             df['brand_name'].astype(str) + ' ' + 
             df['os'].astype(str) + ' ' + 
@@ -44,13 +47,13 @@ def run_hybrid():
 
     df_items = load_data()
 
-    # Content-Based Matrix
+    # Build Content-Based Matrix
     tfidf = TfidfVectorizer(stop_words='english')
     tfidf_matrix = tfidf.fit_transform(df_items['content_features'])
     content_sim_matrix = cosine_similarity(tfidf_matrix)
     content_sim_df = pd.DataFrame(content_sim_matrix, index=df_items['model'], columns=df_items['model'])
 
-    # Collaborative Filtering Mock Data
+    # Generate Mock Data for Collaborative Filtering
     np.random.seed(42)
     sample_phones = df_items['model'].sample(150, random_state=42).tolist()
     mock_ratings = []
@@ -65,7 +68,7 @@ def run_hybrid():
     user_item_matrix = df_ratings.pivot_table(index='user_id', columns='model', values='rating').fillna(0)
     user_sim_df = pd.DataFrame(cosine_similarity(user_item_matrix), index=user_item_matrix.index, columns=user_item_matrix.index)
 
-    # --- HISTORICAL PREDICTION FUNCTIONS (Used for Tab 2 Evaluation) ---
+    # --- HISTORICAL PREDICTION FUNCTIONS (For System Evaluation) ---
     def predict_cb(u_id, item):
         u_ratings = df_ratings[df_ratings['user_id'] == u_id]
         num, den = 0, 0
@@ -86,13 +89,13 @@ def run_hybrid():
             return 3.0
         return np.dot(sim_users[mask], item_rats[mask]) / sim_users[mask].sum()
 
-    # --- LIVE PREDICTION FUNCTIONS (Used for Tab 1 User Input) ---
+    # --- LIVE PREDICTION FUNCTIONS (For User Input) ---
     def predict_live_cb(live_ratings_dict, target_phone, item):
-        # If user explicitly searched a phone, calculate similarity based heavily on that phone
+        # Weight heavily if the user explicitly searched for a specific phone
         if target_phone and target_phone in content_sim_df.index:
-            return content_sim_df.loc[item, target_phone] * 5.0 # Max out the rating multiplier
+            return content_sim_df.loc[item, target_phone] * 5.0 
             
-        # Otherwise, calculate based on slider ratings
+        # Otherwise, calculate similarity based on their slider ratings
         num, den = 0, 0
         for m, r in live_ratings_dict.items():
             if m in content_sim_df.index:
@@ -105,14 +108,13 @@ def run_hybrid():
         if item not in user_item_matrix.columns: 
             return 3.0
             
-        # Build the live user vector to compare against mock users
+        # Create a vector for the current user to compare against historical mock users
         live_vec = np.zeros(len(user_item_matrix.columns))
         cols = list(user_item_matrix.columns)
         for m, r in live_ratings_dict.items():
             if m in cols:
                 live_vec[cols.index(m)] = r
                 
-        # Calculate cosine similarity between live user and all mock users
         sims = cosine_similarity([live_vec], user_item_matrix.values)[0]
         sim_users = pd.Series(sims, index=user_item_matrix.index)
         
@@ -125,25 +127,25 @@ def run_hybrid():
         return np.dot(sim_users[mask], item_rats[mask]) / den if den > 0 else 3.0
 
     # --------------------------------------------------------
-    # FRONTEND LOGIC: STREAMLIT UI & DASHBOARD
+    # STREAMLIT USER INTERFACE
     # --------------------------------------------------------
 
-    st.title("🤝📱 Ultimate Hybrid Recommendation System")
-    st.write("Combine your explicit preferences (search) with your implicit behavior (ratings) for perfect recommendations.")
+    st.title("Hybrid Recommendation System")
+    st.write("This module combines Content-Based Filtering (searching by phone specs) and Collaborative Filtering (user ratings) to generate recommendations.")
 
-    tab1, tab2 = st.tabs(["🎯 Live Recommendations", "📊 System Evaluation"])
+    tab1, tab2 = st.tabs(["Live Recommendations", "System Evaluation"])
 
     # --- TAB 1: LIVE RECOMMENDATIONS ---
     with tab1:
-        st.markdown("### Step 1: Target a Specific Phone (Content-Based)")
-        target_phone_input = st.text_input("Enter a Smartphone Name to find similar specs:", placeholder="e.g., Apple iPhone 14")
+        st.markdown("### Step 1: Search for a Phone (Optional)")
+        target_phone_input = st.text_input("Enter a smartphone name to find similar specifications:", placeholder="e.g., Apple iPhone 14")
         
         st.divider()
         
-        st.markdown("### Step 2: Rate Phones (Collaborative Filtering)")
+        st.markdown("### Step 2: Rate Sample Phones")
         
-        # Bulletproof Randomize Button
-        if st.button("🔄 Randomize Phones", key="hybrid_randomize_btn"):
+        # Re-sample phones and clear old slider states
+        if st.button("Randomize Sample Phones", key="hybrid_randomize_btn"):
             st.session_state.live_sample = df_items.sample(5)
             for key in list(st.session_state.keys()):
                 if key.startswith("live_rating_"):
@@ -156,12 +158,11 @@ def run_hybrid():
         live_ratings = {}
         for idx, row in st.session_state.live_sample.iterrows():
             model_name = row['model']
-            # Unique keys for the hybrid sliders
             rating = st.slider(f"Rate {model_name}", 1, 5, 3, key=f"live_rating_{idx}")
             live_ratings[model_name] = rating
         
-        if st.button("🚀 Get Ultimate Hybrid Recommendations", key="hybrid_rec_btn"):
-            with st.spinner("Calculating custom hybrid scores..."):
+        if st.button("Generate Recommendations", key="hybrid_rec_btn"):
+            with st.spinner("Calculating hybrid scores..."):
                 all_models = df_items['model'].unique()
                 unrated = [m for m in all_models if m not in live_ratings.keys() and m != target_phone_input]
                 
@@ -170,9 +171,9 @@ def run_hybrid():
                     match = df_items[df_items['model'].str.contains(target_phone_input, case=False, na=False)]
                     if not match.empty:
                         valid_target = match.iloc[0]['model']
-                        st.success(f"Targeting specs similar to: **{valid_target}**")
+                        st.success(f"Targeting specifications similar to: **{valid_target}**")
                     else:
-                        st.warning("Phone not found in database. Relying on your slider ratings instead.")
+                        st.warning("Phone not found in the database. Relying on slider ratings instead.")
 
                 results = []
                 for m in unrated[:150]: 
@@ -180,6 +181,7 @@ def run_hybrid():
                     cf = predict_live_cf(live_ratings, m)
                     glob = df_items.loc[df_items['model'] == m, 'normalized_avg_rating'].values[0]
                     
+                    # Adjust weights based on whether a specific phone was searched
                     if valid_target:
                         final = (0.3 * cf) + (0.5 * cb) + (0.2 * glob)
                     else:
@@ -193,12 +195,13 @@ def run_hybrid():
                     })
                 
                 recs = pd.DataFrame(results).sort_values(by='Hybrid Score', ascending=False).head(5)
+                st.subheader("Top Recommendations")
                 st.dataframe(recs, use_container_width=True)
 
     # --- TAB 2: SYSTEM EVALUATION ---
     with tab2:
-        if st.button("Generate Evaluation Chart", key="hybrid_eval_btn"):
-            with st.spinner("Running calculations for RMSE and K=1 to 10. This might take a moment..."):
+        if st.button("Run System Evaluation", key="hybrid_eval_btn"):
+            with st.spinner("Calculating RMSE and Precision/Recall metrics. This may take a moment..."):
                 
                 # --- 1. CALCULATE RMSE ---
                 actuals = []
@@ -267,16 +270,16 @@ def run_hybrid():
                     recall_scores.append(avg_r)
                     f1_scores.append(f1)
 
-                # --- 3. PLOT THE CHART ---
+                # --- 3. PLOT METRICS ---
                 fig, ax = plt.subplots()
 
                 ax.plot(k_values, precision_scores, marker='o', label='Precision')
                 ax.plot(k_values, recall_scores, marker='s', label='Recall')
                 ax.plot(k_values, f1_scores, marker='^', label='F1-score')
 
-                ax.set_xlabel("K (Top Recommendations)")
+                ax.set_xlabel("K (Number of Recommendations)")
                 ax.set_ylabel("Score")
-                ax.set_title("Evaluation Metrics vs K")
+                ax.set_title("System Evaluation Metrics vs K")
                 ax.legend()
 
                 st.pyplot(fig)
@@ -291,7 +294,7 @@ def run_hybrid():
 
                 st.dataframe(result_df, use_container_width=True)
 
-                # --- 5. SHOW ALL 4 METRICS CARDS ---
+                # --- 5. SHOW METRICS ---
                 avg_precision = np.mean(precision_scores)
                 avg_recall = np.mean(recall_scores)
                 avg_f1 = np.mean(f1_scores)
